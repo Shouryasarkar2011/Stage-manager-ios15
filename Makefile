@@ -1,10 +1,10 @@
-# Include your common settings
-include Makefile.common
+ARCHS = arm64
+TARGET = iphone:clang:latest:14.0
 
-# Define the tweak
+include $(THEOS)/makefiles/common.mk
+
 TWEAK_NAME = StageManager
 StageManager_FILES = Tweak.xm
-StageManager_FRAMEWORKS = UIKit CoreGraphics
+StageManager_FRAMEWORKS = UIKit
 
-# Include the standard Theos tweak build path
 include $(THEOS_MAKE_PATH)/tweak.mk
