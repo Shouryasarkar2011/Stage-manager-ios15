@@ -9,11 +9,14 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
+        
       - name: Install Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential clang git libplist-dev libssl-dev
+          
+          # Clean up previous attempts to avoid "already exists" errors
+          rm -rf ldid /home/runner/theos
           
           # 1. Compile ldid
           git clone https://github.com/ProcursusTeam/ldid
@@ -21,25 +24,18 @@ jobs:
           git submodule update --init --recursive
           make
           sudo cp ldid /usr/bin/ldid
+          cd ..
           
           # 2. Setup Theos
           git clone --recursive https://github.com/theos/theos.git /home/runner/theos
           
-          # 3. Use Git to clone SDKs (Way more reliable than tarballs)
+          # 3. Setup SDKs properly
+          mkdir -p /home/runner/theos/sdks
           git clone --depth=1 https://github.com/theos/sdks.git /home/runner/theos/sdks
           
-          # 4. Use Git to clone the Toolchain
-          # Theos keeps the toolchain in a specific repo structure
-          git clone --depth=1 https://github.com/theos/toolchain.git /home/runner/theos/toolchain
-          
-          # Ensure the expected symlinks or folder structure exists
-          # Theos expects /home/runner/theos/toolchain/linux/iphone
-          # If the repo clone creates a different structure, we move/link it:
-          if [ ! -d "/home/runner/theos/toolchain/linux" ]; then
-             mkdir -p /home/runner/theos/toolchain/linux
-             # This is a bit of a hack, but ensures the directory path is satisfied
-             ln -s /home/runner/theos/toolchain/linux-iphone-clang /home/runner/theos/toolchain/linux/iphone || true
-          fi
+          # 4. Setup Toolchain
+          mkdir -p /home/runner/theos/toolchain/linux
+          git clone --depth=1 https://github.com/theos/toolchain.git /home/runner/theos/toolchain/linux/iphone
           
       - name: Build Tweak
         run: |
