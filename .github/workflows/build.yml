@@ -35,15 +35,30 @@ jobs:
              sudo cp ldid /usr/bin/ldid
           fi
 
-
-      - name: Build Tweak
+      - name: Build the Tweak
         run: |
+          # 1. Ensure THEOS is set
           export THEOS=/home/runner/theos_build
-          export THEOS_MAKE_PATH=$THEOS/makefiles
-          make clean
+          
+          # 2. Hard verify that the directory is actually populated
+          echo "Checking if makefiles exist..."
+          if [ ! -f "$THEOS/makefiles/tweak.mk" ]; then
+            echo "THEOS is broken! Fixing..."
+            rm -rf $THEOS
+            git clone --recursive https://github.com/theos/theos.git $THEOS
+          fi
+          
+          # 3. Double check the submodules (this is often why makefiles are missing)
+          cd $THEOS
+          git submodule update --init --recursive
+          
+          # 4. Final sanity check
+          ls -la $THEOS/makefiles/tweak.mk
+          
+          # 5. Run the build
           make package
-        env:
-          THEOS: /home/runner/theos_build
+
+
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
