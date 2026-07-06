@@ -1,12 +1,11 @@
 #import <UIKit/UIKit.h>
+#import <dlfcn.h> // <--- CRITICAL: Do not forget this!
 
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #pragma clang diagnostic ignored "-Wunused-variable"
 
 @interface ZetsuWindow : UIWindow
 @end
-
-extern void _Z10CardShrinkP11ZetsuWindowb(ZetsuWindow *window, bool shrink);
 
 @interface PassThroughWindow : UIWindow
 @end
@@ -57,12 +56,22 @@ static PassThroughWindow *miniDockWindow = nil;
 
 %new
 -(void)minimizeActiveZetsuWindow {
-    NSArray *allWindows = [[UIApplication sharedApplication] performSelector:@selector(windows)];
-    for (UIWindow *window in allWindows) {
-        if ([window isKindOfClass:NSClassFromString(@"ZetsuWindow")]) {
-            _Z10CardShrinkP11ZetsuWindowb((ZetsuWindow *)window, YES); 
-            break;
+    // 1. Open the Zetsu binary dynamically
+    void *handle = dlopen("/Library/MobileSubstrate/DynamicLibraries/Zetsu.dylib", RTLD_NOW);
+    if (handle) {
+        // 2. Get the function pointer
+        void (*shrinkFunc)(ZetsuWindow *, bool) = (void (*)(ZetsuWindow *, bool))dlsym(handle, "_Z10CardShrinkP11ZetsuWindowb");
+        
+        if (shrinkFunc) {
+            NSArray *allWindows = [[UIApplication sharedApplication] performSelector:@selector(windows)];
+            for (UIWindow *window in allWindows) {
+                if ([window isKindOfClass:NSClassFromString(@"ZetsuWindow")]) {
+                    shrinkFunc((ZetsuWindow *)window, YES);
+                    break;
+                }
+            }
         }
+        dlclose(handle);
     }
 }
 
