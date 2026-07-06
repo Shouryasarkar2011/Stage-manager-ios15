@@ -10,8 +10,16 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang ldid
+
       - name: Setup Theos
-        uses: beerpiss/theos-action@v1
+        run: |
+          git clone --recursive https://github.com/theos/theos.git /home/runner/theos
+          echo "THEOS=/home/runner/theos" >> $GITHUB_ENV
+          echo "/home/runner/theos/bin" >> $GITHUB_PATH
 
       - name: Build Tweak
         run: |
