@@ -1,6 +1,6 @@
 #import <UIKit/UIKit.h>
 
-// Interfaces
+// Interfaces for interaction
 @interface SBMainWorkspace : NSObject
 +(id)sharedInstance;
 -(void)activateApplication:(id)arg1;
@@ -10,24 +10,29 @@
 +(id)_applicationWithBundleIdentifier:(NSString *)bundleID;
 @end
 
-static UIWindow *miniDockWindow = nil;
+// Ghost window to allow clicks to pass through
+@interface PassThroughWindow : UIWindow
+@end
+
+@implementation PassThroughWindow
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
+    UIView *hitView = [super hitTest:point withEvent:event];
+    return (hitView == self) ? nil : hitView;
+}
+@end
+
+static PassThroughWindow *miniDockWindow = nil;
 static BOOL isDockHidden = NO;
 
-// Helper to check if we are in landscape
-static BOOL isLandscape() {
-    UIInterfaceOrientation orientation = [UIApplication sharedApplication].statusBarOrientation;
-    return UIInterfaceOrientationIsLandscape(orientation);
+// Helper to check for Landscape on iOS 15
+static BOOL isCurrentlyLandscape() {
+    return UIDeviceOrientationIsLandscape([[UIDevice currentDevice] orientation]);
 }
 
 static void updateDockVisibility() {
     if (!miniDockWindow) return;
-    
-    // If NOT landscape, hide the window completely
-    if (!isLandscape()) {
-        miniDockWindow.hidden = YES;
-    } else {
-        miniDockWindow.hidden = isDockHidden;
-    }
+    // Only show if in landscape AND not manually hidden
+    miniDockWindow.hidden = !isCurrentlyLandscape() || isDockHidden;
 }
 
 %hook SpringBoard
@@ -38,20 +43,29 @@ static void updateDockVisibility() {
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 3 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         CGRect screen = [UIScreen mainScreen].bounds;
         
-        miniDockWindow = [[UIWindow alloc] initWithFrame:CGRectMake(0, 0, screen.size.width * 0.10, screen.size.height)];
+        miniDockWindow = [[PassThroughWindow alloc] initWithFrame:CGRectMake(0, 0, screen.size.width * 0.10, screen.size.height)];
         miniDockWindow.windowLevel = UIWindowLevelStatusBar + 100;
-        miniDockWindow.hidden = !isLandscape(); // Only show if currently landscape
-        miniDockWindow.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5];
+        miniDockWindow.hidden = !isCurrentlyLandscape();
+        miniDockWindow.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.4];
 
-        // Toggle Button
-        UIButton *toggleBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-        toggleBtn.frame = CGRectMake(0, 0, screen.size.width * 0.10, 40);
-        [toggleBtn setTitle:@"||" forState:UIControlStateNormal];
-        [toggleBtn addTarget:self action:@selector(toggleDock) forControlEvents:UIControlEventTouchUpInside];
-        [miniDockWindow addSubview:toggleBtn];
+        // 1. App Snapshot Button
+        UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
+        btn.frame = CGRectMake(10, 100, 50, 50);
+        btn.backgroundColor = [UIColor blueColor];
+        [btn setTitle:@"App" forState:UIControlStateNormal];
+        [btn addTarget:self action:@selector(bringAppBack:) forControlEvents:UIControlEventTouchUpInside];
+        [miniDockWindow addSubview:btn];
 
-        // Monitor Orientation
-        [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidChangeStatusBarOrientationNotification 
+        // 2. Hide/Show Button
+        UIButton *hideBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+        hideBtn.frame = CGRectMake(10, 200, 50, 30);
+        hideBtn.backgroundColor = [UIColor redColor];
+        [hideBtn setTitle:@"Hide" forState:UIControlStateNormal];
+        [hideBtn addTarget:self action:@selector(toggleDock) forControlEvents:UIControlEventTouchUpInside];
+        [miniDockWindow addSubview:hideBtn];
+        
+        // Listen for orientation changes
+        [[NSNotificationCenter defaultCenter] addObserverForName:UIDeviceOrientationDidChangeNotification 
                                                           object:nil queue:[NSOperationQueue mainQueue] 
                                                       usingBlock:^(NSNotification *note) {
             updateDockVisibility();
@@ -62,7 +76,16 @@ static void updateDockVisibility() {
 %new
 -(void)toggleDock {
     isDockHidden = !isDockHidden;
-    miniDockWindow.hidden = isDockHidden;
+    updateDockVisibility();
+}
+
+%new
+-(void)bringAppBack:(id)sender {
+    NSString *bundleID = @"com.apple.Preferences";
+    id app = [%c(SpringBoard) _applicationWithBundleIdentifier:bundleID];
+    if (app) {
+        [[%c(SBMainWorkspace) sharedInstance] activateApplication:app];
+    }
 }
 
 %end
