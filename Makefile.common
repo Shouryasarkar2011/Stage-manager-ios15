@@ -1,0 +1,4 @@
+# Shared build settings for all parts of your project
+ARCHS = arm64
+TARGET := iphoneos:clang:latest:14.0
+export THEOS_DEVICE_IP = 127.0.0.1

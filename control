@@ -1,0 +1,7 @@
+Package: com.sarkarrepo.stagemanager
+Name: Stage Manager Custom
+Version: 0.0.1
+Architecture: iphoneos-arm64
+Description: let you enable stage manager in ios 15 but it requires zetsu
+Author: You
+Depends: mobilesubstrate, jp.dcsyhi.zetsu
