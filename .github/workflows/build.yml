@@ -15,23 +15,31 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential clang git libplist-dev libssl-dev
           
-          # Compile ldid
+          # 1. Compile ldid
           git clone https://github.com/ProcursusTeam/ldid
           cd ldid
           git submodule update --init --recursive
           make
           sudo cp ldid /usr/bin/ldid
           
-          # Setup Theos
+          # 2. Setup Theos
           git clone --recursive https://github.com/theos/theos.git /home/runner/theos
           
-          # Setup folders
-          mkdir -p /home/runner/theos/sdks /home/runner/theos/toolchain/linux/iphone
+          # 3. Use Git to clone SDKs (Way more reliable than tarballs)
+          git clone --depth=1 https://github.com/theos/sdks.git /home/runner/theos/sdks
           
-          # Force a different source for SDKs and Toolchain
-          # We use wget with --no-check-certificate to bypass any SSL handshake weirdness
-          wget -qO - https://github.com/theos/sdks/tarball/master | tar -zxf - -C /home/runner/theos/sdks --strip-components=1
-          wget -qO - https://github.com/theos/toolchain/releases/download/v2.0/linux-iphone-clang.tar.gz | tar -zxf - -C /home/runner/theos/toolchain/linux/iphone
+          # 4. Use Git to clone the Toolchain
+          # Theos keeps the toolchain in a specific repo structure
+          git clone --depth=1 https://github.com/theos/toolchain.git /home/runner/theos/toolchain
+          
+          # Ensure the expected symlinks or folder structure exists
+          # Theos expects /home/runner/theos/toolchain/linux/iphone
+          # If the repo clone creates a different structure, we move/link it:
+          if [ ! -d "/home/runner/theos/toolchain/linux" ]; then
+             mkdir -p /home/runner/theos/toolchain/linux
+             # This is a bit of a hack, but ensures the directory path is satisfied
+             ln -s /home/runner/theos/toolchain/linux-iphone-clang /home/runner/theos/toolchain/linux/iphone || true
+          fi
           
       - name: Build Tweak
         run: |
