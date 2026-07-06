@@ -15,11 +15,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential clang git libplist-dev libssl-dev
           
-          # 1. Brutally clean up previous attempts
-          # This ensures we have zero conflicts
-          rm -rf ldid /home/runner/theos
+          # Clean up EVERYTHING
+          rm -rf ldid /home/runner/theos /home/runner/theos_build
           
-          # 2. Compile ldid
+          # 1. Compile ldid
           git clone https://github.com/ProcursusTeam/ldid
           cd ldid
           git submodule update --init --recursive
@@ -27,30 +26,28 @@ jobs:
           sudo cp ldid /usr/bin/ldid
           cd ..
           
-          # 3. Setup Theos
-          git clone --recursive https://github.com/theos/theos.git /home/runner/theos
+          # 2. Setup Theos in a NEW location
+          git clone --recursive https://github.com/theos/theos.git /home/runner/theos_build
           
-          # 4. Fresh SDK clone
-          # No need to mkdir, git will create the directory for us
-          git clone --depth=1 https://github.com/theos/sdks.git /home/runner/theos/sdks
+          # 3. Fresh SDK clone into the new location
+          git clone --depth=1 https://github.com/theos/sdks.git /home/runner/theos_build/sdks
           
-          # 5. Fresh Toolchain clone
-          # Use a parent directory that doesn't conflict
-          mkdir -p /home/runner/theos/toolchain
-          git clone --depth=1 https://github.com/theos/toolchain.git /home/runner/theos/toolchain/linux-iphone-clang
+          # 4. Fresh Toolchain clone
+          mkdir -p /home/runner/theos_build/toolchain
+          git clone --depth=1 https://github.com/theos/toolchain.git /home/runner/theos_build/toolchain/linux-iphone-clang
           
-          # Link it to where Theos expects it
-          mkdir -p /home/runner/theos/toolchain/linux
-          ln -s /home/runner/theos/toolchain/linux-iphone-clang /home/runner/theos/toolchain/linux/iphone
-
+          # Link it
+          mkdir -p /home/runner/theos_build/toolchain/linux
+          ln -s /home/runner/theos_build/toolchain/linux-iphone-clang /home/runner/theos_build/toolchain/linux/iphone
+          
       - name: Build Tweak
         run: |
-          export THEOS=/home/runner/theos
+          export THEOS=/home/runner/theos_build
           export THEOS_MAKE_PATH=$THEOS/makefiles
           make clean
           make package
         env:
-          THEOS: /home/runner/theos
+          THEOS: /home/runner/theos_build
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
