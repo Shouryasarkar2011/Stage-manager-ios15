@@ -9,16 +9,17 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        
+
       - name: Install Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential clang git libplist-dev libssl-dev
           
-          # Clean up previous attempts to avoid "already exists" errors
+          # 1. Brutally clean up previous attempts
+          # This ensures we have zero conflicts
           rm -rf ldid /home/runner/theos
           
-          # 1. Compile ldid
+          # 2. Compile ldid
           git clone https://github.com/ProcursusTeam/ldid
           cd ldid
           git submodule update --init --recursive
@@ -26,17 +27,22 @@ jobs:
           sudo cp ldid /usr/bin/ldid
           cd ..
           
-          # 2. Setup Theos
+          # 3. Setup Theos
           git clone --recursive https://github.com/theos/theos.git /home/runner/theos
           
-          # 3. Setup SDKs properly
-          mkdir -p /home/runner/theos/sdks
+          # 4. Fresh SDK clone
+          # No need to mkdir, git will create the directory for us
           git clone --depth=1 https://github.com/theos/sdks.git /home/runner/theos/sdks
           
-          # 4. Setup Toolchain
-          mkdir -p /home/runner/theos/toolchain/linux
-          git clone --depth=1 https://github.com/theos/toolchain.git /home/runner/theos/toolchain/linux/iphone
+          # 5. Fresh Toolchain clone
+          # Use a parent directory that doesn't conflict
+          mkdir -p /home/runner/theos/toolchain
+          git clone --depth=1 https://github.com/theos/toolchain.git /home/runner/theos/toolchain/linux-iphone-clang
           
+          # Link it to where Theos expects it
+          mkdir -p /home/runner/theos/toolchain/linux
+          ln -s /home/runner/theos/toolchain/linux-iphone-clang /home/runner/theos/toolchain/linux/iphone
+
       - name: Build Tweak
         run: |
           export THEOS=/home/runner/theos
