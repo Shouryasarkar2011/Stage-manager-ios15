@@ -24,9 +24,13 @@ jobs:
       - name: Setup Theos
         run: |
           git clone --recursive https://github.com/theos/theos.git /home/runner/theos
+          # Download and install the iOS SDK
+          mkdir -p /home/runner/theos/sdks
+          wget https://github.com/theos/sdks/archive/master.tar.gz
+          tar -zxf master.tar.gz -C /home/runner/theos/sdks --strip-components=1
           echo "THEOS=/home/runner/theos" >> $GITHUB_ENV
           echo "/home/runner/theos/bin" >> $GITHUB_PATH
-
+          
       - name: Build Tweak
         run: |
           export THEOS=/home/runner/theos
