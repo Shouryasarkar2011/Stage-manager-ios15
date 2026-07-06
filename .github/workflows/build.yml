@@ -10,46 +10,31 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install Dependencies
+      - name: Install Theos (The Official Way)
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential clang git libplist-dev libssl-dev
           
-          # 1. Clean Slate
+          # Clean up any remnants
           sudo rm -rf /home/runner/theos_build
-          mkdir -p /home/runner/theos_build
           
-          # 2. Compile ldid
-          if [ ! -d "ldid" ]; then git clone https://github.com/ProcursusTeam/ldid; fi
-          cd ldid
-          git submodule update --init --recursive
-          make
-          sudo cp ldid /usr/bin/ldid
-          cd ..
+          # Install via the official toolchain script
+          bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
           
-          # 3. Setup Theos
-          cd /home/runner/theos_build
-          git init
-          git remote add origin https://github.com/theos/theos.git
-          git fetch --depth 1 origin master
-          git checkout master
-          git submodule update --init --recursive
+          # Move it to the location you expect, or just export the path
+          # The installer usually puts it in /opt/theos or ~/theos
+          # Let's point THEOS to where it actually landed
+          echo "THEOS=/home/runner/theos" >> $GITHUB_ENV
           
-          # 4. Reliable SDK/Toolchain Setup
-          # SDKs via tarball (this was working for you)
-          mkdir -p /home/runner/theos_build/sdks
-          curl -L https://github.com/theos/sdks/tarball/master | tar -xz -C /home/runner/theos_build/sdks --strip-components=1
-          
-          # Toolchain via Git (The stable way)
-          mkdir -p /home/runner/theos_build/toolchain
-          git clone --depth=1 https://github.com/theos/toolchain.git /home/runner/theos_build/toolchain/linux-iphone-clang
-          
-          # Ensure path exists for Theos
-          mkdir -p /home/runner/theos_build/toolchain/linux
-          ln -s /home/runner/theos_build/toolchain/linux-iphone-clang /home/runner/theos_build/toolchain/linux/iphone
-          
-          # Export for next steps
-          echo "THEOS=/home/runner/theos_build" >> $GITHUB_ENV
+          # Double check if ldid is installed, if not, install it
+          if ! command -v ldid &> /dev/null; then
+             git clone https://github.com/ProcursusTeam/ldid
+             cd ldid
+             git submodule update --init --recursive
+             make
+             sudo cp ldid /usr/bin/ldid
+          fi
+
 
       - name: Build Tweak
         run: |
