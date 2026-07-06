@@ -13,37 +13,25 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential clang git libplist-dev libssl-dev
+          # Install ldid via a reliable source and grab toolchain
+          sudo apt-get install -y build-essential clang git libplist-dev libssl-dev ldid
           
-          # Manually download and install ldid
-          # We'll use the official Procursus release binary directly
-          wget https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5/ldid_2.1.5-1_linux_amd64 -O ldid
-          chmod +x ldid
-          sudo mv ldid /usr/bin/ldid
+          # Setup Theos
+          git clone --recursive https://github.com/theos/theos.git /home/runner/theos
           
-          # Download the iOS Toolchain
+          # Setup Toolchain
           wget https://github.com/theos/toolchain/releases/latest/download/linux-iphone-clang.tar.gz
           tar -zxf linux-iphone-clang.tar.gz -C /home/runner/theos --strip-components=1
-          
-      - name: Setup Theos
-        run: |
-          git clone --recursive https://github.com/theos/theos.git /home/runner/theos
-          # Download and install the iOS SDK
-          mkdir -p /home/runner/theos/sdks
-          wget https://github.com/theos/sdks/archive/master.tar.gz
-          tar -zxf master.tar.gz -C /home/runner/theos/sdks --strip-components=1
-          echo "THEOS=/home/runner/theos" >> $GITHUB_ENV
-          echo "/home/runner/theos/bin" >> $GITHUB_PATH
-          
+
       - name: Build Tweak
         run: |
           export THEOS=/home/runner/theos
           export THEOS_MAKE_PATH=$THEOS/makefiles
-          # First, clean the project
           make clean
-          # Then build the package
-          make
-          
+          make package
+        env:
+          THEOS: /home/runner/theos
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
