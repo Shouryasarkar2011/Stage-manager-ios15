@@ -1,16 +1,13 @@
 #import <UIKit/UIKit.h>
 
-// Silence compiler warnings about deprecated UI methods
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#pragma clang diagnostic ignored "-Wunused-variable"
 
-// --- ZETSU BRIDGE ---
 @interface ZetsuWindow : UIWindow
 @end
 
-// The internal function from your class-dump
 extern void _Z10CardShrinkP11ZetsuWindowb(ZetsuWindow *window, bool shrink);
 
-// --- DOCK UI ---
 @interface PassThroughWindow : UIWindow
 @end
 
@@ -24,7 +21,6 @@ extern void _Z10CardShrinkP11ZetsuWindowb(ZetsuWindow *window, bool shrink);
 @end
 
 static PassThroughWindow *miniDockWindow = nil;
-static BOOL isDockHidden = NO;
 
 %hook SpringBoard
 
@@ -61,7 +57,6 @@ static BOOL isDockHidden = NO;
 
 %new
 -(void)minimizeActiveZetsuWindow {
-    // Use performSelector to bypass compiler deprecation checks
     NSArray *allWindows = [[UIApplication sharedApplication] performSelector:@selector(windows)];
     for (UIWindow *window in allWindows) {
         if ([window isKindOfClass:NSClassFromString(@"ZetsuWindow")]) {
