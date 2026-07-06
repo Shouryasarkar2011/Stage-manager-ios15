@@ -16,4 +16,4 @@ StageManager_LIBRARIES = dl
 StageManager_ARCHS = arm64 arm64e
 StageManager_CFLAGS = -fobjc-arc
 
-include $(THEOS_MAKE_PATH)/tweak.mk
+include $(THEOS_MAKE_PATH)/Tweak.mk
