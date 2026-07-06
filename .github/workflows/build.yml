@@ -31,7 +31,10 @@ jobs:
         run: |
           export THEOS=/home/runner/theos
           export THEOS_MAKE_PATH=$THEOS/makefiles
-          make package
+          # First, clean the project
+          make clean
+          # Then build the package
+          make
           
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
