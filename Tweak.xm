@@ -1,6 +1,6 @@
 #import <UIKit/UIKit.h>
 
-// Interfaces for interaction
+// Interface for app activation
 @interface SBMainWorkspace : NSObject
 +(id)sharedInstance;
 -(void)activateApplication:(id)arg1;
@@ -10,7 +10,7 @@
 +(id)_applicationWithBundleIdentifier:(NSString *)bundleID;
 @end
 
-// Ghost window to allow clicks to pass through
+// PassThroughWindow keeps touches from blocking the rest of the screen
 @interface PassThroughWindow : UIWindow
 @end
 
@@ -24,15 +24,9 @@
 static PassThroughWindow *miniDockWindow = nil;
 static BOOL isDockHidden = NO;
 
-// Helper to check for Landscape on iOS 15
+// Check orientation
 static BOOL isCurrentlyLandscape() {
     return UIDeviceOrientationIsLandscape([[UIDevice currentDevice] orientation]);
-}
-
-static void updateDockVisibility() {
-    if (!miniDockWindow) return;
-    // Only show if in landscape AND not manually hidden
-    miniDockWindow.hidden = !isCurrentlyLandscape() || isDockHidden;
 }
 
 %hook SpringBoard
@@ -43,12 +37,14 @@ static void updateDockVisibility() {
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 3 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         CGRect screen = [UIScreen mainScreen].bounds;
         
+        // 1. Positioned on LEFT edge, windowLevel Alert forces it above system dock
         miniDockWindow = [[PassThroughWindow alloc] initWithFrame:CGRectMake(0, 0, screen.size.width * 0.10, screen.size.height)];
-        miniDockWindow.windowLevel = UIWindowLevelStatusBar + 100;
+        miniDockWindow.windowLevel = UIWindowLevelAlert + 1;
         miniDockWindow.hidden = !isCurrentlyLandscape();
         miniDockWindow.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.4];
+        miniDockWindow.layer.cornerRadius = 10;
 
-        // 1. App Snapshot Button
+        // 2. App Snapshot Button
         UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
         btn.frame = CGRectMake(10, 100, 50, 50);
         btn.backgroundColor = [UIColor blueColor];
@@ -56,7 +52,7 @@ static void updateDockVisibility() {
         [btn addTarget:self action:@selector(bringAppBack:) forControlEvents:UIControlEventTouchUpInside];
         [miniDockWindow addSubview:btn];
 
-        // 2. Hide/Show Button
+        // 3. Hide/Show Button
         UIButton *hideBtn = [UIButton buttonWithType:UIButtonTypeCustom];
         hideBtn.frame = CGRectMake(10, 200, 50, 30);
         hideBtn.backgroundColor = [UIColor redColor];
@@ -64,11 +60,10 @@ static void updateDockVisibility() {
         [hideBtn addTarget:self action:@selector(toggleDock) forControlEvents:UIControlEventTouchUpInside];
         [miniDockWindow addSubview:hideBtn];
         
-        // Listen for orientation changes
         [[NSNotificationCenter defaultCenter] addObserverForName:UIDeviceOrientationDidChangeNotification 
                                                           object:nil queue:[NSOperationQueue mainQueue] 
                                                       usingBlock:^(NSNotification *note) {
-            updateDockVisibility();
+            miniDockWindow.hidden = !isCurrentlyLandscape();
         }];
     });
 }
@@ -76,7 +71,15 @@ static void updateDockVisibility() {
 %new
 -(void)toggleDock {
     isDockHidden = !isDockHidden;
-    updateDockVisibility();
+    [UIView animateWithDuration:0.3 animations:^{
+        if (isDockHidden) {
+            // When hidden, leave 20px of the dock visible as a "handle" on the left edge
+            miniDockWindow.frame = CGRectMake(-(miniDockWindow.frame.size.width - 20), 0, miniDockWindow.frame.size.width, miniDockWindow.frame.size.height);
+        } else {
+            // Snap back to full view
+            miniDockWindow.frame = CGRectMake(0, 0, miniDockWindow.frame.size.width, miniDockWindow.frame.size.height);
+        }
+    }];
 }
 
 %new
@@ -84,7 +87,10 @@ static void updateDockVisibility() {
     NSString *bundleID = @"com.apple.Preferences";
     id app = [%c(SpringBoard) _applicationWithBundleIdentifier:bundleID];
     if (app) {
-        [[%c(SBMainWorkspace) sharedInstance] activateApplication:app];
+        // Use a tiny delay to ensure SpringBoard handles the transition safely
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            [[%c(SBMainWorkspace) sharedInstance] activateApplication:app];
+        });
     }
 }
 
