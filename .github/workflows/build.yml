@@ -1,0 +1,24 @@
+name: Build Tweak
+
+on: [push]
+
+jobs:
+  build:
+    name: Build Tweak
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Theos
+        uses: beerpiss/theos-action@v1
+
+      - name: Build Tweak
+        run: |
+          make package
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: StageManager-deb
+          path: packages/*.deb
