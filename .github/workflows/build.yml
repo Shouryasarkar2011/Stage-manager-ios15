@@ -25,19 +25,17 @@ jobs:
           # Setup Theos
           git clone --recursive https://github.com/theos/theos.git /home/runner/theos
           
-          # Simplified SDK & Toolchain Setup
-          # We use one 'mkdir' for both and combine the logic
+          # Setup folders
           mkdir -p /home/runner/theos/sdks /home/runner/theos/toolchain/linux/iphone
           
-          # Download and extract SDKs
-          curl -L -o sdks.tar.gz https://github.com/theos/sdks/archive/master.tar.gz
+          # FIXED SDK URL
+          curl -L -o sdks.tar.gz https://github.com/theos/sdks/archive/refs/tags/latest.tar.gz
           tar -zxf sdks.tar.gz -C /home/runner/theos/sdks --strip-components=1
           
-          # Download and extract Toolchain
-          curl -L -o toolchain.tar.gz https://github.com/theos/toolchain/releases/latest/download/linux-iphone-clang.tar.gz
+          # FIXED TOOLCHAIN URL (Directly from Procursus for linux-amd64)
+          curl -L -o toolchain.tar.gz https://github.com/theos/toolchain/releases/download/v2.0/linux-iphone-clang.tar.gz
           tar -zxf toolchain.tar.gz -C /home/runner/theos/toolchain/linux/iphone --strip-components=1
           
-          # Final Cleanup
           rm sdks.tar.gz toolchain.tar.gz
           
       - name: Build Tweak
