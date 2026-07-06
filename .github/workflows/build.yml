@@ -15,7 +15,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential clang git libplist-dev libssl-dev
           
-          # Compile ldid from source (No wget, no apt, just pure compilation)
+          # Compile ldid from source
           git clone https://github.com/ProcursusTeam/ldid
           cd ldid
           git submodule update --init --recursive
@@ -25,6 +25,13 @@ jobs:
           # Setup Theos
           git clone --recursive https://github.com/theos/theos.git /home/runner/theos
 
+          # SURGICAL SDK ADDITION:
+          # Only create the dir and download SDKs without touching previous steps
+          mkdir -p /home/runner/theos/sdks
+          wget -q https://github.com/theos/sdks/archive/master.tar.gz
+          tar -zxf master.tar.gz -C /home/runner/theos/sdks --strip-components=1
+          rm master.tar.gz
+          
       - name: Build Tweak
         run: |
           export THEOS=/home/runner/theos
