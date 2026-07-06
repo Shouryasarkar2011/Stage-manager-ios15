@@ -20,29 +20,25 @@ jobs:
           sudo rm -rf $THEOS
           mkdir -p $THEOS
           
-          # 1. Disable the credential helper so it stops asking for a username
-          git config --global credential.helper ""
-          
-          # 2. Clone Theos
+          # 1. Clone Theos
           git clone --recursive https://github.com/theos/theos.git $THEOS
           
-          # 3. Setup SDKs
+          # 2. Setup SDKs (using tarball)
           mkdir -p $THEOS/sdks
           curl -L https://github.com/theos/sdks/tarball/master | tar -xz -C $THEOS/sdks --strip-components=1
           
-          # 4. Clone Toolchain - Using the 'url.' trick to force non-interactive mode
-          # This tells git to treat these requests as public/non-auth
-          git config --global url."https://github.com/".insteadOf "git@github.com:"
-          mkdir -p $THEOS/toolchain/linux
-          git clone --depth=1 https://github.com/theos/toolchain.git $THEOS/toolchain/linux/iphone
+          # 3. Setup Toolchain (using tarball instead of git clone)
+          # This avoids the "fatal: could not read Username" error entirely
+          mkdir -p $THEOS/toolchain/linux/iphone
+          curl -L https://github.com/theos/toolchain/releases/download/v2.0/linux-iphone-clang.tar.gz | tar -xz -C $THEOS/toolchain/linux/iphone
           
-          # 5. Install ldid
+          # 4. Install ldid
           if ! command -v ldid &> /dev/null; then
              git clone https://github.com/ProcursusTeam/ldid
              cd ldid && make && sudo cp ldid /usr/bin/ldid
           fi
           
-          # 6. Set Env
+          # 5. Set Env
           echo "THEOS=$THEOS" >> $GITHUB_ENV
 
       - name: Build the Tweak
