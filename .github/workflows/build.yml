@@ -13,8 +13,14 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          # Using ldid directly from repo, no wget
-          sudo apt-get install -y build-essential clang git libplist-dev libssl-dev ldid
+          sudo apt-get install -y build-essential clang git libplist-dev libssl-dev
+          
+          # Compile ldid from source (No wget, no apt, just pure compilation)
+          git clone https://github.com/ProcursusTeam/ldid
+          cd ldid
+          git submodule update --init --recursive
+          make
+          sudo cp ldid /usr/bin/ldid
           
           # Setup Theos
           git clone --recursive https://github.com/theos/theos.git /home/runner/theos
