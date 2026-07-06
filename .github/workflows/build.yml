@@ -20,27 +20,29 @@ jobs:
           sudo rm -rf $THEOS
           mkdir -p $THEOS
           
-          # Use git config to disable credential prompts globally
+          # 1. Disable the credential helper so it stops asking for a username
           git config --global credential.helper ""
           
-          # Clone Theos
+          # 2. Clone Theos
           git clone --recursive https://github.com/theos/theos.git $THEOS
           
-          # Setup SDKs
+          # 3. Setup SDKs
           mkdir -p $THEOS/sdks
           curl -L https://github.com/theos/sdks/tarball/master | tar -xz -C $THEOS/sdks --strip-components=1
           
-          # Clone Toolchain
+          # 4. Clone Toolchain - Using the 'url.' trick to force non-interactive mode
+          # This tells git to treat these requests as public/non-auth
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
           mkdir -p $THEOS/toolchain/linux
           git clone --depth=1 https://github.com/theos/toolchain.git $THEOS/toolchain/linux/iphone
           
-          # Install ldid
+          # 5. Install ldid
           if ! command -v ldid &> /dev/null; then
              git clone https://github.com/ProcursusTeam/ldid
              cd ldid && make && sudo cp ldid /usr/bin/ldid
           fi
           
-          # Set Env
+          # 6. Set Env
           echo "THEOS=$THEOS" >> $GITHUB_ENV
 
       - name: Build the Tweak
