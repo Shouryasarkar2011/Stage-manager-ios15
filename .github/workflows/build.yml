@@ -38,13 +38,20 @@ jobs:
           git checkout master
           git submodule update --init --recursive
           
-          # 4. Handle SDKs and Toolchain manually to avoid git conflicts
-          # Use curl -L to follow redirects and output to a temp file, then extract
+          # 4. Handle SDKs and Toolchain manually
+          # Extracting SDKs
           mkdir -p /home/runner/theos_build/sdks
           curl -L https://github.com/theos/sdks/tarball/master | tar -xz -C /home/runner/theos_build/sdks --strip-components=1
           
+          # Fix Toolchain download
           mkdir -p /home/runner/theos_build/toolchain/linux/iphone
-          curl -L https://github.com/theos/toolchain/releases/download/v2.0/linux-iphone-clang.tar.gz | tar -xz -C /home/runner/theos_build/toolchain/linux/iphone
+          # Use a more reliable way to fetch the toolchain
+          # Sometimes the direct release link is finicky. Let's try cloning the repo instead.
+          git clone --depth=1 https://github.com/theos/toolchain.git /home/runner/theos_build/toolchain/linux-iphone-clang
+          
+          # Link it
+          ln -s /home/runner/theos_build/toolchain/linux-iphone-clang /home/runner/theos_build/toolchain/linux/iphone || true
+
 
       - name: Build Tweak
         run: |
