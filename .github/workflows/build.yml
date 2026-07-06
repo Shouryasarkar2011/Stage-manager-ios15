@@ -13,20 +13,16 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential clang git libplist-dev libssl-dev
+          # Using ldid directly from repo, no wget
+          sudo apt-get install -y build-essential clang git libplist-dev libssl-dev ldid
           
           # Setup Theos
           git clone --recursive https://github.com/theos/theos.git /home/runner/theos
-          
-          # Setup Toolchain
-          wget https://github.com/theos/toolchain/releases/latest/download/linux-iphone-clang.tar.gz
-          tar -zxf linux-iphone-clang.tar.gz -C /home/runner/theos --strip-components=1
 
       - name: Build Tweak
         run: |
           export THEOS=/home/runner/theos
           export THEOS_MAKE_PATH=$THEOS/makefiles
-          # Theos often comes with its own ldid-handling logic if the toolchain is correct
           make clean
           make package
         env:
