@@ -13,10 +13,13 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential clang
-          # Manually download ldid
-          sudo wget https://github.com/procursus-team/ldid/releases/download/v2.1.5/ldid_2.1.5-1_linux_amd64 -O /usr/bin/ldid
-          sudo chmod +x /usr/bin/ldid
+          sudo apt-get install -y build-essential clang git libplist-dev libssl-dev
+          # Build ldid from source
+          git clone https://github.com/ProcursusTeam/ldid.git
+          cd ldid
+          git submodule update --init --recursive
+          make
+          sudo cp ldid /usr/bin/ldid
 
       - name: Setup Theos
         run: |
