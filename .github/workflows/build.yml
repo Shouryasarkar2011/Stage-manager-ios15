@@ -10,7 +10,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-       - name: Install Theos & Dependencies
+      - name: Install Theos & Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential clang git libplist-dev libssl-dev
@@ -30,7 +30,7 @@ jobs:
           mkdir -p $THEOS/sdks
           curl -L https://github.com/theos/sdks/tarball/master | tar -xz -C $THEOS/sdks --strip-components=1
           
-          # Clone Toolchain - Use the direct URL without credential triggers
+          # Clone Toolchain
           mkdir -p $THEOS/toolchain/linux
           git clone --depth=1 https://github.com/theos/toolchain.git $THEOS/toolchain/linux/iphone
           
@@ -45,13 +45,7 @@ jobs:
 
       - name: Build the Tweak
         run: |
-          # Go to your project folder
           cd $GITHUB_WORKSPACE
-          
-          # Verify structure
-          ls -F
-          
-          # Build it
           make package
         env:
           THEOS: /home/runner/theos
