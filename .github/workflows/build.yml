@@ -15,18 +15,22 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential clang git libplist-dev libssl-dev
           
-          # Compile ldid from source
+          # 1. Compile ldid
           git clone https://github.com/ProcursusTeam/ldid
           cd ldid
           git submodule update --init --recursive
           make
           sudo cp ldid /usr/bin/ldid
           
-          # Setup Theos
+          # 2. Setup Theos
           git clone --recursive https://github.com/theos/theos.git /home/runner/theos
-
-          # SURGICAL SDK ADDITION:
-          # Only create the dir and download SDKs without touching previous steps
+          
+          # 3. Add the Toolchain (The missing piece!)
+          mkdir -p /home/runner/theos/toolchain/linux/iphone
+          wget -q https://github.com/theos/toolchain/releases/latest/download/linux-iphone-clang.tar.gz
+          tar -zxf linux-iphone-clang.tar.gz -C /home/runner/theos/toolchain/linux/iphone --strip-components=1
+          
+          # 4. Add the SDKs
           mkdir -p /home/runner/theos/sdks
           wget -q https://github.com/theos/sdks/archive/master.tar.gz
           tar -zxf master.tar.gz -C /home/runner/theos/sdks --strip-components=1
