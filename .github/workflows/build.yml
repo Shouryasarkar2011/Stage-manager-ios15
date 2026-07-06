@@ -15,13 +15,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential clang git libplist-dev libssl-dev
           
-          # 1. Brutally nuke everything
-          # We use -rf to force delete without asking for confirmation
+          # 1. Clean Slate
           sudo rm -rf /home/runner/theos_build
           mkdir -p /home/runner/theos_build
           
           # 2. Compile ldid
-          # We only clone it if it's not already there
           if [ ! -d "ldid" ]; then git clone https://github.com/ProcursusTeam/ldid; fi
           cd ldid
           git submodule update --init --recursive
@@ -29,8 +27,7 @@ jobs:
           sudo cp ldid /usr/bin/ldid
           cd ..
           
-          # 3. Setup Theos - force it into the directory
-          # Instead of cloning into it, we init it
+          # 3. Setup Theos
           cd /home/runner/theos_build
           git init
           git remote add origin https://github.com/theos/theos.git
@@ -38,20 +35,21 @@ jobs:
           git checkout master
           git submodule update --init --recursive
           
-          # 4. Handle SDKs and Toolchain manually
-          # Extracting SDKs
+          # 4. Reliable SDK/Toolchain Setup
+          # SDKs via tarball (this was working for you)
           mkdir -p /home/runner/theos_build/sdks
           curl -L https://github.com/theos/sdks/tarball/master | tar -xz -C /home/runner/theos_build/sdks --strip-components=1
           
-          # Fix Toolchain download
-          mkdir -p /home/runner/theos_build/toolchain/linux/iphone
-          # Use a more reliable way to fetch the toolchain
-          # Sometimes the direct release link is finicky. Let's try cloning the repo instead.
+          # Toolchain via Git (The stable way)
+          mkdir -p /home/runner/theos_build/toolchain
           git clone --depth=1 https://github.com/theos/toolchain.git /home/runner/theos_build/toolchain/linux-iphone-clang
           
-          # Link it
-          ln -s /home/runner/theos_build/toolchain/linux-iphone-clang /home/runner/theos_build/toolchain/linux/iphone || true
-
+          # Ensure path exists for Theos
+          mkdir -p /home/runner/theos_build/toolchain/linux
+          ln -s /home/runner/theos_build/toolchain/linux-iphone-clang /home/runner/theos_build/toolchain/linux/iphone
+          
+          # Export for next steps
+          echo "THEOS=/home/runner/theos_build" >> $GITHUB_ENV
 
       - name: Build Tweak
         run: |
