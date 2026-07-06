@@ -1,40 +1,74 @@
 #import <UIKit/UIKit.h>
 
+// Interfaces for interaction
+@interface SBMainWorkspace : NSObject
++(id)sharedInstance;
+-(void)activateApplication:(id)arg1;
+@end
+
+@interface SpringBoard : UIApplication
++(id)_applicationWithBundleIdentifier:(NSString *)bundleID;
+@end
+
 static UIWindow *miniDockWindow = nil;
+static BOOL isDockHidden = NO;
 
 %hook SpringBoard
 
 -(void)applicationDidFinishLaunching:(id)application {
     %orig;
 
-    // Wait 3 seconds for SpringBoard to settle before injecting the overlay
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 3 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-        
-        // Ensure we don't create multiple windows if the method fires again
-        if (miniDockWindow) return;
-
-        CGRect screenBounds = [UIScreen mainScreen].bounds;
-        
-        // Define the 10% sidebar frame
-        // Width is 10% of the screen width
-        CGFloat dockWidth = screenBounds.size.width * 0.10;
-        CGRect dockFrame = CGRectMake(0, 0, dockWidth, screenBounds.size.height);
-
-        miniDockWindow = [[UIWindow alloc] initWithFrame:dockFrame];
+        CGRect screen = [UIScreen mainScreen].bounds;
+        miniDockWindow = [[UIWindow alloc] initWithFrame:CGRectMake(0, 0, screen.size.width * 0.10, screen.size.height)];
         miniDockWindow.windowLevel = UIWindowLevelStatusBar + 100;
         miniDockWindow.hidden = NO;
-        miniDockWindow.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.6]; // Semi-transparent black
-        
-        // Keep this NO for now so you can still click apps behind the dock
-        miniDockWindow.userInteractionEnabled = NO; 
-        
-        // Add a label just to prove it's working
-        UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(0, 50, dockWidth, 50)];
-        label.text = @"Dock";
-        label.textColor = [UIColor whiteColor];
-        label.textAlignment = NSTextAlignmentCenter;
-        [miniDockWindow addSubview:label];
+        miniDockWindow.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.5];
+
+        // 1. Add "Handle" to show/hide
+        UIButton *toggleBtn = [UIButton buttonWithType:UIButtonTypeSystem];
+        toggleBtn.frame = CGRectMake(0, 0, screen.size.width * 0.10, 40);
+        [toggleBtn setTitle:@"||" forState:UIControlStateNormal];
+        [toggleBtn addTarget:self action:@selector(toggleDock) forControlEvents:UIControlEventTouchUpInside];
+        [miniDockWindow addSubview:toggleBtn];
+
+        // 2. Add App Snapshot Placeholder
+        // NOTE: In the future, replace this with a UIImageView using [app snapshot]
+        UIButton *appSnap = [UIButton buttonWithType:UIButtonTypeCustom];
+        appSnap.frame = CGRectMake(10, 60, 50, 80);
+        appSnap.backgroundColor = [UIColor grayColor]; 
+        [appSnap setTitle:@"App" forState:UIControlStateNormal];
+        [appSnap addTarget:self action:@selector(bringAppBack:) forControlEvents:UIControlEventTouchUpInside];
+        [miniDockWindow addSubview:appSnap];
+
+        // 3. Orientation Listener
+        [[NSNotificationCenter defaultCenter] addObserverForName:UIDeviceOrientationDidChangeNotification 
+                                                          object:nil queue:[NSOperationQueue mainQueue] 
+                                                      usingBlock:^(NSNotification *note) {
+            [self adjustDockForRotation];
+        }];
     });
+}
+
+%new
+-(void)toggleDock {
+    isDockHidden = !isDockHidden;
+    [UIView animateWithDuration:0.3 animations:^{
+        miniDockWindow.frame = isDockHidden ? CGRectMake(-(miniDockWindow.frame.size.width - 20), 0, miniDockWindow.frame.size.width, miniDockWindow.frame.size.height) 
+                                            : CGRectMake(0, 0, miniDockWindow.frame.size.width, miniDockWindow.frame.size.height);
+    }];
+}
+
+%new
+-(void)adjustDockForRotation {
+    CGRect screen = [UIScreen mainScreen].bounds;
+    miniDockWindow.frame = CGRectMake(isDockHidden ? -(screen.size.width * 0.10 - 20) : 0, 0, screen.size.width * 0.10, screen.size.height);
+}
+
+%new
+-(void)bringAppBack:(id)sender {
+    id app = [%c(SpringBoard) _applicationWithBundleIdentifier:@"com.apple.Preferences"];
+    [[%c(SBMainWorkspace) sharedInstance] activateApplication:app];
 }
 
 %end
