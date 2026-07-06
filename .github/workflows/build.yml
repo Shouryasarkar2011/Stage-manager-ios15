@@ -10,55 +10,44 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install Theos (The Official Way)
+      - name: Install Theos & Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential clang git libplist-dev libssl-dev
           
-          # Clean up any remnants
-          sudo rm -rf /home/runner/theos_build
+          # Use one standard location
+          export THEOS=/home/runner/theos
           
-          # Install via the official toolchain script
-          bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
+          # Clone Theos properly
+          git clone --recursive https://github.com/theos/theos.git $THEOS
           
-          # Move it to the location you expect, or just export the path
-          # The installer usually puts it in /opt/theos or ~/theos
-          # Let's point THEOS to where it actually landed
-          echo "THEOS=/home/runner/theos" >> $GITHUB_ENV
+          # Setup SDKs
+          mkdir -p $THEOS/sdks
+          curl -L https://github.com/theos/sdks/tarball/master | tar -xz -C $THEOS/sdks --strip-components=1
           
-          # Double check if ldid is installed, if not, install it
-          if ! command -v ldid &> /dev/null; then
-             git clone https://github.com/ProcursusTeam/ldid
-             cd ldid
-             git submodule update --init --recursive
-             make
-             sudo cp ldid /usr/bin/ldid
-          fi
+          # Setup Toolchain
+          mkdir -p $THEOS/toolchain/linux/iphone
+          git clone --depth=1 https://github.com/theos/toolchain.git $THEOS/toolchain/linux/iphone
+          
+          # Install ldid
+          git clone --recursive https://github.com/ProcursusTeam/ldid
+          cd ldid && make && sudo cp ldid /usr/bin/ldid
+          
+          # Save THEOS path to environment
+          echo "THEOS=$THEOS" >> $GITHUB_ENV
 
       - name: Build the Tweak
         run: |
-          # 1. Ensure THEOS is set
-          export THEOS=/home/runner/theos_build
+          # Go to your project folder
+          cd $GITHUB_WORKSPACE
           
-          # 2. Hard verify that the directory is actually populated
-          echo "Checking if makefiles exist..."
-          if [ ! -f "$THEOS/makefiles/tweak.mk" ]; then
-            echo "THEOS is broken! Fixing..."
-            rm -rf $THEOS
-            git clone --recursive https://github.com/theos/theos.git $THEOS
-          fi
+          # Verify structure
+          ls -F
           
-          # 3. Double check the submodules (this is often why makefiles are missing)
-          cd $THEOS
-          git submodule update --init --recursive
-          
-          # 4. Final sanity check
-          ls -la $THEOS/makefiles/tweak.mk
-          
-          # 5. Run the build
+          # Build it
           make package
-
-
+        env:
+          THEOS: /home/runner/theos
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
