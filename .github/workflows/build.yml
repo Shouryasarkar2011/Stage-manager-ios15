@@ -15,13 +15,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential clang git libplist-dev libssl-dev
           
-          # Force download a known working version of ldid
-          wget https://github.com/theos/ldid/raw/master/ldid.cpp
-          # Actually, let's grab the prebuilt binary from a more stable path
-          wget https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5/ldid_2.1.5-1_linux_amd64 -O ldid
-          chmod +x ldid
-          sudo mv ldid /usr/bin/ldid
-          
           # Setup Theos
           git clone --recursive https://github.com/theos/theos.git /home/runner/theos
           
@@ -33,6 +26,7 @@ jobs:
         run: |
           export THEOS=/home/runner/theos
           export THEOS_MAKE_PATH=$THEOS/makefiles
+          # Theos often comes with its own ldid-handling logic if the toolchain is correct
           make clean
           make package
         env:
