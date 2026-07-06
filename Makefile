@@ -2,16 +2,18 @@
 export THEOS_PACKAGE_SCHEME = rootless
 FINALPACKAGE = 1
 
-# Architectures and Target
-ARCHS = arm64 arm64e
-TARGET := iphone:clang:latest:15.0
-
+# Standard build setup
 include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = StageManager
+
 StageManager_FILES = Tweak.xm
 StageManager_FRAMEWORKS = UIKit
-# This tells the linker to include the library needed for dlsym
+# Ensure we link against the dynamic loading library for dlsym
 StageManager_LIBRARIES = dl
+
+# This is critical for Rootless arm64e support
+StageManager_ARCHS = arm64 arm64e
+StageManager_CFLAGS = -fobjc-arc
 
 include $(THEOS_MAKE_PATH)/tweak.mk
