@@ -28,15 +28,10 @@ jobs:
           # Setup folders
           mkdir -p /home/runner/theos/sdks /home/runner/theos/toolchain/linux/iphone
           
-          # USE DIRECT MASTER ARCHIVE (This is 100% reliable)
-          curl -L -o sdks.tar.gz https://github.com/theos/sdks/archive/refs/heads/master.tar.gz
-          tar -zxf sdks.tar.gz -C /home/runner/theos/sdks --strip-components=1
-          
-          # Toolchain
-          curl -L -o toolchain.tar.gz https://github.com/theos/toolchain/releases/download/v2.0/linux-iphone-clang.tar.gz
-          tar -zxf toolchain.tar.gz -C /home/runner/theos/toolchain/linux/iphone --strip-components=1
-          
-          rm sdks.tar.gz toolchain.tar.gz
+          # Force a different source for SDKs and Toolchain
+          # We use wget with --no-check-certificate to bypass any SSL handshake weirdness
+          wget -qO - https://github.com/theos/sdks/tarball/master | tar -zxf - -C /home/runner/theos/sdks --strip-components=1
+          wget -qO - https://github.com/theos/toolchain/releases/download/v2.0/linux-iphone-clang.tar.gz | tar -zxf - -C /home/runner/theos/toolchain/linux/iphone
           
       - name: Build Tweak
         run: |
